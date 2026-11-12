@@ -9,11 +9,8 @@
 #include "DisplayManager.h"
 #include "WidgetRenderer.h"
 #include "InputManager.h"
-#include "DateAdjuster.h"
-#include "TimeAdjuster.h"
-#include "DisplayGauge.h"
-#include "DisplayBar.h"
-#include "StringAdjuster.h"
+// Optional widget headers are included by WidgetRenderer.h according to the
+// MENU_ENABLE_* switches in MenuConfig.h.
 
 class MenuSystem : public IMenuController {
 private:
@@ -32,32 +29,44 @@ private:
     // ── Editor state ──────────────────────────────────────────────────────────
     bool                inValueEdit;
     ValueAdjuster*      currentAdjuster;
+#if MENU_ENABLE_MULTISELECT
     bool                inMultiSelect;
     MultiSelectAdjuster* currentMultiSelect;
+#endif
 
     // ── Date editor state ─────────────────────────────────────────────────────
+#if MENU_ENABLE_DATE
     bool          inDateEdit;
     DateAdjuster* currentDateAdj;
+#endif
 
     // ── Time editor state ─────────────────────────────────────────────────────
+#if MENU_ENABLE_TIME
     bool          inTimeEdit;
     TimeAdjuster* currentTimeAdj;
+#endif
 
     // ── Gauge view state ──────────────────────────────────────────────────────
+#if MENU_ENABLE_GAUGE
     bool              inGaugeView;
     DisplayGaugeBase* currentGauge;
+#endif
 
     // ── Bar view state ─────────────────────────────────────────────────────
+#if MENU_ENABLE_BAR
     bool              inBarView;
     DisplayBarBase*   currentBar;
+#endif
 
     // ── String editor state ───────────────────────────────────────────────────
+#if MENU_ENABLE_STRING
     bool              inStringEdit;
     StringAdjuster*   currentStringAdj;
+#endif
 
     // ── Error state ───────────────────────────────────────────────────────────
     int  errorCode;
-    char errorMessage[64];
+    char errorMessage[MAX_ERROR_LENGTH];
 
     // ── Timing ────────────────────────────────────────────────────────────────
     unsigned long previousMillis;
@@ -82,18 +91,31 @@ public:
           dm(display), wr(dm),
           inputMode(INPUT_BUTTONS),
           inValueEdit(false), currentAdjuster(nullptr),
+#if MENU_ENABLE_MULTISELECT
           inMultiSelect(false), currentMultiSelect(nullptr),
+#endif
+#if MENU_ENABLE_DATE
           inDateEdit(false), currentDateAdj(nullptr),
+#endif
+#if MENU_ENABLE_TIME
           inTimeEdit(false), currentTimeAdj(nullptr),
+#endif
+#if MENU_ENABLE_GAUGE
           inGaugeView(false), currentGauge(nullptr),
+#endif
+#if MENU_ENABLE_BAR
           inBarView(false), currentBar(nullptr),
+#endif
+#if MENU_ENABLE_STRING
           inStringEdit(false), currentStringAdj(nullptr),
+#endif
           errorCode(0), previousMillis(0), interval(1000),
           scrollOffset(0), scrollLastUpdate(0), scrollCursorItem(-1), scrollPauseUntil(0) {
         errorMessage[0] = '\0';
         inputMgr = new ButtonInputManager(this, upPin, downPin, okPin);
     }
 
+#if MENU_ENABLE_ENCODER
     // Rotary encoder mode
     MenuSystem(U8G2* display, int encA, int encB, int encBtn,
                bool /*unused*/, int sensitivity = 1)
@@ -101,35 +123,62 @@ public:
           dm(display), wr(dm),
           inputMode(INPUT_ENCODER),
           inValueEdit(false), currentAdjuster(nullptr),
+#if MENU_ENABLE_MULTISELECT
           inMultiSelect(false), currentMultiSelect(nullptr),
+#endif
+#if MENU_ENABLE_DATE
           inDateEdit(false), currentDateAdj(nullptr),
+#endif
+#if MENU_ENABLE_TIME
           inTimeEdit(false), currentTimeAdj(nullptr),
+#endif
+#if MENU_ENABLE_GAUGE
           inGaugeView(false), currentGauge(nullptr),
+#endif
+#if MENU_ENABLE_BAR
           inBarView(false), currentBar(nullptr),
+#endif
+#if MENU_ENABLE_STRING
           inStringEdit(false), currentStringAdj(nullptr),
+#endif
           errorCode(0), previousMillis(0), interval(1000),
           scrollOffset(0), scrollLastUpdate(0), scrollCursorItem(-1), scrollPauseUntil(0) {
         errorMessage[0] = '\0';
         inputMgr = new EncoderInputManager(this, encA, encB, encBtn, sensitivity);
     }
+#endif // MENU_ENABLE_ENCODER
 
+#if MENU_ENABLE_ONE_BUTTON
     // Single-button mode
     MenuSystem(U8G2* display, int buttonPin, bool shortPressIsUp = true)
         : menuCount(0), currentMenuIndex(0), cursorPosition(0),
           dm(display), wr(dm),
           inputMode(INPUT_ONE_BUTTON),
           inValueEdit(false), currentAdjuster(nullptr),
+#if MENU_ENABLE_MULTISELECT
           inMultiSelect(false), currentMultiSelect(nullptr),
+#endif
+#if MENU_ENABLE_DATE
           inDateEdit(false), currentDateAdj(nullptr),
+#endif
+#if MENU_ENABLE_TIME
           inTimeEdit(false), currentTimeAdj(nullptr),
+#endif
+#if MENU_ENABLE_GAUGE
           inGaugeView(false), currentGauge(nullptr),
+#endif
+#if MENU_ENABLE_BAR
           inBarView(false), currentBar(nullptr),
+#endif
+#if MENU_ENABLE_STRING
           inStringEdit(false), currentStringAdj(nullptr),
+#endif
           errorCode(0), previousMillis(0), interval(1000),
           scrollOffset(0), scrollLastUpdate(0), scrollCursorItem(-1), scrollPauseUntil(0) {
         errorMessage[0] = '\0';
         inputMgr = new OneButtonInputManager(this, buttonPin, shortPressIsUp);
     }
+#endif // MENU_ENABLE_ONE_BUTTON
 
     ~MenuSystem() {
         delete inputMgr;
@@ -139,10 +188,12 @@ public:
                     delete menus[i].items[j].callback;
                     menus[i].items[j].callback = nullptr;
                 }
+#if MENU_ENABLE_TEXT
                 if (menus[i].items[j].textInfo) {
                     delete menus[i].items[j].textInfo;
                     menus[i].items[j].textInfo = nullptr;
                 }
+#endif
             }
     }
 
@@ -205,14 +256,19 @@ public:
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, adj);
     }
 
+#if MENU_ENABLE_DATE
     void addDateMenuItem(int menuIdx, const char* name, DateAdjuster* adj) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, adj);
     }
+#endif
 
+#if MENU_ENABLE_TIME
     void addTimeMenuItem(int menuIdx, const char* name, TimeAdjuster* adj) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, adj);
     }
+#endif
 
+#if MENU_ENABLE_GAUGE
     void addDisplayGaugeInt(int menuIdx, const char* name, DisplayGaugeInt* g) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, g);
     }
@@ -220,7 +276,9 @@ public:
     void addDisplayGaugeFloat(int menuIdx, const char* name, DisplayGaugeFloat* g) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, g);
     }
+#endif
 
+#if MENU_ENABLE_BAR
     void addDisplayBarInt(int menuIdx, const char* name, DisplayBarInt* b) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, b);
     }
@@ -228,15 +286,21 @@ public:
     void addDisplayBarFloat(int menuIdx, const char* name, DisplayBarFloat* b) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, b);
     }
+#endif
 
+#if MENU_ENABLE_MULTISELECT
     void addMultiSelectMenuItem(int menuIdx, const char* name, MultiSelectAdjuster* adj) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, adj);
     }
+#endif
 
+#if MENU_ENABLE_STRING
     void addStringMenuItem(int menuIdx, const char* name, StringAdjuster* adj) {
         if (valid(menuIdx)) menus[menuIdx].addItem(name, -1, nullptr, adj);
     }
+#endif
 
+#if MENU_ENABLE_TEXT
     // ── Text rows (non-selectable, display-only) ──────────────────────────────
     //
     // Inserts a non-selectable text row into the menu list. The cursor
@@ -280,6 +344,7 @@ public:
         // The "name" field is unused for text items; store a marker
         menus[menuIdx].addItem("", -1, nullptr, nullptr, ti);
     }
+#endif // MENU_ENABLE_TEXT
 
     void setMenuMaxVisibleItems(int menuIdx, int max) {
         if (valid(menuIdx)) menus[menuIdx].setMaxVisibleItems(max);
@@ -370,50 +435,71 @@ public:
                                  ButtonTriggerType down  = TRIGGER_LOW,
                                  ButtonTriggerType ok    = TRIGGER_LOW,
                                  ButtonTriggerType enc   = TRIGGER_LOW) {
+        (void)enc;
         if (inputMode == INPUT_BUTTONS)
             static_cast<ButtonInputManager*>(inputMgr)->setTriggerTypes(up, down, ok);
+#if MENU_ENABLE_ENCODER
         else if (inputMode == INPUT_ENCODER)
             static_cast<EncoderInputManager*>(inputMgr)->setButtonTriggerType(enc);
+#endif
+#if MENU_ENABLE_ONE_BUTTON
         else if (inputMode == INPUT_ONE_BUTTON)
             static_cast<OneButtonInputManager*>(inputMgr)->setTriggerType(ok);
+#endif
     }
 
     void setLongPressThreshold(unsigned long ms) {
+#if MENU_ENABLE_ONE_BUTTON
         if (inputMode == INPUT_ONE_BUTTON)
             static_cast<OneButtonInputManager*>(inputMgr)->setLongPressThreshold(ms);
+#else
+        (void)ms;
+#endif
     }
 
     // ── Navigation (public + IMenuController) ────────────────────────────────
     void moveUp() override {
         // While gauge is showing: close it, then let the cursor move normally
+#if MENU_ENABLE_GAUGE
         if (inGaugeView) {
             inGaugeView  = false;
             currentGauge = nullptr;
             // fall through — cursor moves up below
         }
+#endif
+#if MENU_ENABLE_BAR
         if (inBarView) {
             inBarView  = false;
             currentBar = nullptr;
         }
+#endif
+#if MENU_ENABLE_TIME
         if (inTimeEdit && currentTimeAdj) {
             if (currentTimeAdj->isOnField()) currentTimeAdj->scrollUp();
             else currentTimeAdj->actionUp();
             return;
         }
+#endif
+#if MENU_ENABLE_DATE
         if (inDateEdit && currentDateAdj) {
             if (currentDateAdj->isOnField()) currentDateAdj->scrollUp();
             else currentDateAdj->actionUp();   // wraps within Redo/Set/Back only
             return;
         }
+#endif
+#if MENU_ENABLE_STRING
         if (inStringEdit && currentStringAdj) {
             if (currentStringAdj->isOnConfirm()) currentStringAdj->confirmUp();
             else if (currentStringAdj->isOnChar()) currentStringAdj->scrollUp();
             else currentStringAdj->actionUp();
             return;
         }
+#endif
+#if MENU_ENABLE_MULTISELECT
         if (inMultiSelect && currentMultiSelect) {
             currentMultiSelect->moveCursorUp(); return;
         }
+#endif
         if (inValueEdit && currentAdjuster) {
             if (currentAdjuster->getType() == ValueAdjuster::TYPE_BOOL)
                 static_cast<BoolValueAdjuster*>(currentAdjuster)->setTempValue(true);
@@ -431,34 +517,46 @@ public:
 
     void moveDown() override {
         // While gauge is showing: close it, then let the cursor move normally
+#if MENU_ENABLE_GAUGE
         if (inGaugeView) {
             inGaugeView  = false;
             currentGauge = nullptr;
             // fall through — cursor moves down below
         }
+#endif
+#if MENU_ENABLE_BAR
         if (inBarView) {
             inBarView  = false;
             currentBar = nullptr;
         }
+#endif
+#if MENU_ENABLE_TIME
         if (inTimeEdit && currentTimeAdj) {
             if (currentTimeAdj->isOnField()) currentTimeAdj->scrollDown();
             else currentTimeAdj->actionDown();
             return;
         }
+#endif
+#if MENU_ENABLE_DATE
         if (inDateEdit && currentDateAdj) {
             if (currentDateAdj->isOnField()) currentDateAdj->scrollDown();
             else currentDateAdj->actionDown(); // wraps within Redo/Set/Back only
             return;
         }
+#endif
+#if MENU_ENABLE_STRING
         if (inStringEdit && currentStringAdj) {
             if (currentStringAdj->isOnConfirm()) currentStringAdj->confirmDown();
             else if (currentStringAdj->isOnChar()) currentStringAdj->scrollDown();
             else currentStringAdj->actionDown();
             return;
         }
+#endif
+#if MENU_ENABLE_MULTISELECT
         if (inMultiSelect && currentMultiSelect) {
             currentMultiSelect->moveCursorDown(); return;
         }
+#endif
         if (inValueEdit && currentAdjuster) {
             if (currentAdjuster->getType() == ValueAdjuster::TYPE_BOOL)
                 static_cast<BoolValueAdjuster*>(currentAdjuster)->setTempValue(false);
@@ -475,8 +573,13 @@ public:
     }
 
     void select() override {
+#if MENU_ENABLE_GAUGE
         if (inGaugeView) { inGaugeView = false; currentGauge = nullptr; return; }
+#endif
+#if MENU_ENABLE_BAR
         if (inBarView)   { inBarView   = false; currentBar   = nullptr; return; }
+#endif
+#if MENU_ENABLE_TIME
         if (inTimeEdit && currentTimeAdj) {
             if (currentTimeAdj->isOnRedo()) {
                 currentTimeAdj->redo();
@@ -494,6 +597,8 @@ public:
             }
             return;
         }
+#endif
+#if MENU_ENABLE_DATE
         if (inDateEdit && currentDateAdj) {
             if (currentDateAdj->isOnRedo()) {
                 currentDateAdj->redo();
@@ -511,6 +616,8 @@ public:
             }
             return;
         }
+#endif
+#if MENU_ENABLE_STRING
         if (inStringEdit && currentStringAdj) {
             if (currentStringAdj->isOnConfirm()) {
                 // Clear All confirm dialog: Yes clears, No cancels
@@ -539,6 +646,8 @@ public:
             }
             return;
         }
+#endif
+#if MENU_ENABLE_MULTISELECT
         if (inMultiSelect && currentMultiSelect) {
             if (currentMultiSelect->isOnOk()) {
                 // Only exit if min selection requirement met (or empty list)
@@ -552,6 +661,7 @@ public:
             }
             return;
         }
+#endif
         if (inValueEdit && currentAdjuster) {
             if (currentAdjuster->getType() == ValueAdjuster::TYPE_BOOL)
                 static_cast<BoolValueAdjuster*>(currentAdjuster)->applyTempValue();
@@ -567,28 +677,37 @@ public:
         if (item->isTextItem()) return;
 
         if (item->valueAdjuster) {
+#if MENU_ENABLE_TIME
             if (item->valueAdjuster->getType() == ValueAdjuster::TYPE_TIME) {
                 currentTimeAdj = static_cast<TimeAdjuster*>(item->valueAdjuster);
                 currentTimeAdj->beginEdit();
                 inTimeEdit = true;
                 return;
             }
+#endif
+#if MENU_ENABLE_DATE
             if (item->valueAdjuster->getType() == ValueAdjuster::TYPE_DATE) {
                 currentDateAdj = static_cast<DateAdjuster*>(item->valueAdjuster);
                 currentDateAdj->beginEdit();
                 inDateEdit = true;
                 return;
             }
+#endif
+#if MENU_ENABLE_STRING
             if (item->valueAdjuster->getType() == ValueAdjuster::TYPE_STRING) {
                 currentStringAdj = static_cast<StringAdjuster*>(item->valueAdjuster);
                 currentStringAdj->beginEdit();
                 inStringEdit = true;
                 return;
             }
+#endif
+#if MENU_ENABLE_MULTISELECT
             if (item->valueAdjuster->getType() == ValueAdjuster::TYPE_MULTI) {
                 currentMultiSelect = static_cast<MultiSelectAdjuster*>(item->valueAdjuster);
                 inMultiSelect      = true;
-            } else {
+            } else
+#endif
+            {
                 currentAdjuster = item->valueAdjuster;
                 inValueEdit     = true;
                 if (currentAdjuster->getType() == ValueAdjuster::TYPE_BOOL)
@@ -661,6 +780,7 @@ public:
         }
     }
 
+#if MENU_ENABLE_TEXT
     // Resolve a MenuTextInfo's font type to an actual U8g2 font pointer.
     const uint8_t* resolveTextFont(const MenuTextInfo* ti) const {
         if (!ti) return dm.standardFont;
@@ -671,6 +791,7 @@ public:
             default:               return dm.standardFont;
         }
     }
+#endif
 
 private:
     bool valid(int idx) const { return idx >= 0 && idx < menuCount; }
@@ -681,14 +802,19 @@ private:
         Menu* m = currentMenu();
         if (!m || cursorPosition >= m->itemCount) return;
         ValueAdjuster* adj = m->items[cursorPosition].valueAdjuster;
+        (void)adj;
+#if MENU_ENABLE_GAUGE
         if (adj && adj->getType() == ValueAdjuster::TYPE_GAUGE) {
             currentGauge = static_cast<DisplayGaugeBase*>(adj);
             inGaugeView  = true;
         }
+#endif
+#if MENU_ENABLE_BAR
         if (adj && adj->getType() == ValueAdjuster::TYPE_BAR) {
             currentBar  = static_cast<DisplayBarBase*>(adj);
             inBarView   = true;
         }
+#endif
     }
 
     // ── Render dispatcher ─────────────────────────────────────────────────────
@@ -697,10 +823,13 @@ private:
         if (errorCode > 0) {
             wr.drawError(errorCode, errorMessage); return;
         }
+#if MENU_ENABLE_MULTISELECT
         if (inMultiSelect && currentMultiSelect) {
             const char* title = titleForCurrentItem();
             wr.drawMultiSelect(currentMultiSelect, title); return;
         }
+#endif
+#if MENU_ENABLE_GAUGE
         if (inGaugeView && currentGauge) {
             Menu* m = currentMenu();
             const char* menuTitle = m ? m->title : "";
@@ -713,6 +842,8 @@ private:
             wr.drawGaugeScreen(currentGauge, menuTitle, titleForCurrentItem(), cCur, cTot);
             return;
         }
+#endif
+#if MENU_ENABLE_BAR
         if (inBarView && currentBar) {
             Menu* m = currentMenu();
             const char* menuTitle = m ? m->title : "";
@@ -724,18 +855,25 @@ private:
             wr.drawBarScreen(currentBar, menuTitle, titleForCurrentItem(), cCur, cTot);
             return;
         }
+#endif
+#if MENU_ENABLE_DATE
         if (inDateEdit && currentDateAdj) {
             wr.drawDateEditor(currentDateAdj, titleForCurrentItem());
             return;
         }
+#endif
+#if MENU_ENABLE_TIME
         if (inTimeEdit && currentTimeAdj) {
             wr.drawTimeEditor(currentTimeAdj, titleForCurrentItem());
             return;
         }
+#endif
+#if MENU_ENABLE_STRING
         if (inStringEdit && currentStringAdj) {
             wr.drawStringEditor(currentStringAdj, titleForCurrentItem());
             return;
         }
+#endif
         if (inValueEdit && currentAdjuster) {
             if (currentAdjuster->getType() == ValueAdjuster::TYPE_BOOL)
                 wr.drawBoolEditor(static_cast<BoolValueAdjuster*>(currentAdjuster),
@@ -765,6 +903,7 @@ private:
         dm.drawTitleBar(m->title);
         dm.drawSeparator();
 
+#if MENU_ENABLE_ONE_BUTTON
         // One-button long-press progress bar
         if (inputMode == INPUT_ONE_BUTTON) {
             OneButtonInputManager* ob = static_cast<OneButtonInputManager*>(inputMgr);
@@ -777,6 +916,7 @@ private:
                 d->drawBox(lineX, lineY + 2, (int)(dm.screenWidth * prog), 2);
             }
         }
+#endif
 
         d->setFont(dm.standardFont);
 
@@ -797,7 +937,7 @@ private:
             uint8_t itemIdx;    // logical item index
             uint8_t subLine;    // 0 for normal/single-text, 0..N for paragraph lines
         };
-        static const int MAX_VIS_ROWS = 64;
+        static const int MAX_VIS_ROWS = MAX_VISUAL_ROWS;
         VisRow vmap[MAX_VIS_ROWS];
         int totalVisRows = 0;
         int cursorVisRow = 0;   // visual row where cursor item starts
@@ -806,6 +946,7 @@ private:
             if (item == cursorPosition)
                 cursorVisRow = totalVisRows;
 
+#if MENU_ENABLE_TEXT
             if (m->items[item].isTextItem() && m->items[item].textInfo->paragraph) {
                 // Pre-compute how many wrapped lines this paragraph needs
                 MenuTextInfo* ti = m->items[item].textInfo;
@@ -851,12 +992,16 @@ private:
                 ti->wrappedLines = lines;
                 totalVisRows += lines;
                 d->setFont(dm.standardFont);
-            } else {
+            } else
+#endif // MENU_ENABLE_TEXT
+            {
                 // Normal item or single-line text: 1 visual row
                 vmap[totalVisRows] = { item, 0 };
                 totalVisRows++;
+#if MENU_ENABLE_TEXT
                 if (m->items[item].isTextItem())
                     m->items[item].textInfo->wrappedLines = 1;
+#endif
             }
         }
 
@@ -886,6 +1031,7 @@ private:
             int16_t yPos = yBase + vr * dm.lineHeight;
             bool    isSel = (idx == cursorPosition);
 
+#if MENU_ENABLE_TEXT
             // ── TEXT ROW ──────────────────────────────────────────────────────
             if (m->items[idx].isTextItem()) {
                 MenuTextInfo* ti = m->items[idx].textInfo;
@@ -966,6 +1112,7 @@ private:
                 d->setFont(dm.standardFont);
                 continue;
             }
+#endif // MENU_ENABLE_TEXT
 
             // ── NORMAL ITEM ───────────────────────────────────────────────────
 
@@ -982,23 +1129,37 @@ private:
             if (m->items[idx].valueAdjuster && !hideValueForWidth) {
                 hasValue = true;
                 ValueAdjuster* adj = m->items[idx].valueAdjuster;
-                if (adj->getType() == ValueAdjuster::TYPE_DATE) {
-                    static_cast<DateAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf));
-                } else if (adj->getType() == ValueAdjuster::TYPE_TIME) {
-                    static_cast<TimeAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf));
-                } else if (adj->getType() == ValueAdjuster::TYPE_GAUGE) {
-                    static_cast<DisplayGaugeBase*>(adj)->formatSummary(valBuf, sizeof(valBuf));
-                } else if (adj->getType() == ValueAdjuster::TYPE_BAR) {
-                    static_cast<DisplayBarBase*>(adj)->formatSummary(valBuf, sizeof(valBuf));
-                } else if (adj->getType() == ValueAdjuster::TYPE_MULTI) {
-                    MultiSelectAdjuster* ms = static_cast<MultiSelectAdjuster*>(adj);
-                    ms->formatSummary(valBuf, sizeof(valBuf));
-                } else if (adj->getType() == ValueAdjuster::TYPE_STRING) {
-                    static_cast<StringAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf));
-                } else {
-                    int dec = adj->getDecimalPlaces();
-                    if (dec > 0) { char fmt[16]; snprintf(fmt,sizeof(fmt),"%%.%df",dec); snprintf(valBuf,sizeof(valBuf),fmt,adj->getValue()); }
-                    else         { snprintf(valBuf, sizeof(valBuf), "%.0f", adj->getValue()); }
+                switch (adj->getType()) {
+#if MENU_ENABLE_DATE
+                    case ValueAdjuster::TYPE_DATE:
+                        static_cast<DateAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+#if MENU_ENABLE_TIME
+                    case ValueAdjuster::TYPE_TIME:
+                        static_cast<TimeAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+#if MENU_ENABLE_GAUGE
+                    case ValueAdjuster::TYPE_GAUGE:
+                        static_cast<DisplayGaugeBase*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+#if MENU_ENABLE_BAR
+                    case ValueAdjuster::TYPE_BAR:
+                        static_cast<DisplayBarBase*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+#if MENU_ENABLE_MULTISELECT
+                    case ValueAdjuster::TYPE_MULTI:
+                        static_cast<MultiSelectAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+#if MENU_ENABLE_STRING
+                    case ValueAdjuster::TYPE_STRING:
+                        static_cast<StringAdjuster*>(adj)->formatSummary(valBuf, sizeof(valBuf)); break;
+#endif
+                    default: {
+                        int dec = adj->getDecimalPlaces();
+                        if (dec > 0) { char fmt[16]; snprintf(fmt,sizeof(fmt),"%%.%df",dec); snprintf(valBuf,sizeof(valBuf),fmt,adj->getValue()); }
+                        else         { snprintf(valBuf, sizeof(valBuf), "%.0f", adj->getValue()); }
+                        break;
+                    }
                 }
                 valUnit = (adj->getType() == ValueAdjuster::TYPE_MULTI ||
                            adj->getType() == ValueAdjuster::TYPE_BAR ||
@@ -1172,6 +1333,7 @@ private:
         // Screen-info overlay
         if (m->hasScreenInfo && m->screenInfoCallback) m->screenInfoCallback();
 
+#if MENU_ENABLE_ONE_BUTTON
         // One-button hint
         if (inputMode == INPUT_ONE_BUTTON) {
             OneButtonInputManager* ob = static_cast<OneButtonInputManager*>(inputMgr);
@@ -1186,6 +1348,7 @@ private:
                 d->print(" L=Ok");
             }
         }
+#endif
 
         d->sendBuffer();
     }

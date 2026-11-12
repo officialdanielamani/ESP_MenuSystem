@@ -63,7 +63,7 @@
 #include <Arduino.h>
 #include "Adjusters.h"
 
-#define MAX_STRING_LENGTH 32
+// MAX_STRING_LENGTH is defined in MenuConfig.h (default 32)
 
 // ── Predefined palettes ──────────────────────────────────────────────────────
 // These are raw string literals designed to be COMBINED by placing them

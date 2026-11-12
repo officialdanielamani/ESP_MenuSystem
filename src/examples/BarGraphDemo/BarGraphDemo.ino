@@ -3,6 +3,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #include <Arduino.h>
 #include <U8g2lib.h>
+
+// This sketch only uses bar graphs, so every other optional widget is
+// left out of the firmware. See "Reducing Firmware Size" in the README.
+#define MENU_MINIMAL
+#define MENU_ENABLE_BAR 1
 #include "ESP32_MenuSystem.h"
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);

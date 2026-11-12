@@ -6,13 +6,18 @@
 #define INPUT_MANAGER_H
 
 #include <Arduino.h>
+#include "MenuConfig.h"
 
-#if defined(ESP32)
-  #include <ESP32Encoder.h>
-  #define USE_ESP32_ENCODER
-#else
-  #include "InterruptEncoder.h"
-  #define USE_INTERRUPT_ENCODER
+// The encoder driver is only pulled in when encoder input is enabled, so
+// button-only projects do not need the ESP32Encoder library installed.
+#if MENU_ENABLE_ENCODER
+  #if defined(ESP32)
+    #include <ESP32Encoder.h>
+    #define USE_ESP32_ENCODER
+  #else
+    #include "InterruptEncoder.h"
+    #define USE_INTERRUPT_ENCODER
+  #endif
 #endif
 
 // -----------------------------------------------------------------------------
@@ -128,6 +133,7 @@ public:
     }
 };
 
+#if MENU_ENABLE_ENCODER
 // -----------------------------------------------------------------------------
 // EncoderInputManager
 // -----------------------------------------------------------------------------
@@ -200,6 +206,9 @@ public:
     }
 };
 
+#endif // MENU_ENABLE_ENCODER
+
+#if MENU_ENABLE_ONE_BUTTON
 // -----------------------------------------------------------------------------
 // OneButtonInputManager
 // Short press = navigate, long press = select/confirm
@@ -283,5 +292,7 @@ public:
         lastButtonState = cur;
     }
 };
+
+#endif // MENU_ENABLE_ONE_BUTTON
 
 #endif // INPUT_MANAGER_H

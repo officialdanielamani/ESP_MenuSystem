@@ -1,14 +1,9 @@
+// ESP32_MenuSystem.h
+// Single include for the whole library. Optional features and array limits
+// are configured in MenuConfig.h (override with #define before this include
+// or with -D compiler flags).
 #ifndef ESP32_MENU_SYSTEM_WRAPPER_H
 #define ESP32_MENU_SYSTEM_WRAPPER_H
-#include "MenuTypes.h"
-#include "Adjusters.h"
-#include "DateAdjuster.h"
-#include "TimeAdjuster.h"
-#include "DisplayGauge.h"
-#include "DisplayBar.h"
-#include "StringAdjuster.h"
-#include "DisplayManager.h"
-#include "WidgetRenderer.h"
-#include "InputManager.h"
+#include "MenuConfig.h"
 #include "MenuSystem.h"
 #endif

@@ -4,6 +4,11 @@
 // Hardware: 128×64 OLED (SSD1306), three push-buttons (Up / Down / OK)
 // ─────────────────────────────────────────────────────────────────────────────
 #include <U8g2lib.h>
+
+// This sketch only uses the time editor, so every other optional widget is
+// left out of the firmware. See "Reducing Firmware Size" in the README.
+#define MENU_MINIMAL
+#define MENU_ENABLE_TIME 1
 #include "ESP32_MenuSystem.h"
 
 // ── Display ───────────────────────────────────────────────────────────────────

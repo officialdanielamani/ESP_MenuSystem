@@ -1,12 +1,7 @@
 #ifndef MENU_TYPES_H
 #define MENU_TYPES_H
 #include <Arduino.h>
-
-// ── Tunable limits ───────────────────────────────────────────────────────────
-#define MAX_MENU_ITEMS       16
-#define MAX_MENU_NAME_LENGTH 32
-#define MAX_MENU_DEPTH       16
-#define MAX_TEXT_LENGTH       64
+#include "MenuConfig.h"   // tunable limits + feature switches
 
 // ── Selection cursor style ────────────────────────────────────────────────────
 enum SelectionStyle : uint8_t {
@@ -82,16 +77,25 @@ public:
     int8_t          nextMenuId;
     MenuCallback*   callback;
     ValueAdjuster*  valueAdjuster;
+#if MENU_ENABLE_TEXT
     MenuTextInfo*   textInfo;       // non-null → this is a text row (non-selectable)
+#endif
 
     MenuItem()
-        : nextMenuId(-1), callback(nullptr), valueAdjuster(nullptr), textInfo(nullptr)
+        : nextMenuId(-1), callback(nullptr), valueAdjuster(nullptr)
+#if MENU_ENABLE_TEXT
+          , textInfo(nullptr)
+#endif
     { name[0] = '\0'; }
 
     MenuItem(const char* n, int8_t id = -1, MenuCallback* cb = nullptr,
              ValueAdjuster* adj = nullptr, MenuTextInfo* ti = nullptr)
-        : nextMenuId(id), callback(cb), valueAdjuster(adj), textInfo(ti)
+        : nextMenuId(id), callback(cb), valueAdjuster(adj)
+#if MENU_ENABLE_TEXT
+          , textInfo(ti)
+#endif
     {
+        (void)ti;
         if (n) {
             strncpy(name, n, MAX_MENU_NAME_LENGTH - 1);
             name[MAX_MENU_NAME_LENGTH - 1] = '\0';
@@ -100,8 +104,13 @@ public:
         }
     }
 
+#if MENU_ENABLE_TEXT
     bool isTextItem()    const { return textInfo != nullptr; }
     bool isSelectable()  const { return textInfo == nullptr; }
+#else
+    bool isTextItem()    const { return false; }
+    bool isSelectable()  const { return true; }
+#endif
 };
 
 // ── Menu ─────────────────────────────────────────────────────────────────────
@@ -157,6 +166,7 @@ public:
 
     // Count the total visual rows (text paragraphs expand into multiple rows)
     int totalVisualRows() const {
+#if MENU_ENABLE_TEXT
         int rows = 0;
         for (uint8_t i = 0; i < itemCount; i++) {
             if (items[i].textInfo && items[i].textInfo->paragraph)
@@ -165,6 +175,9 @@ public:
                 rows += 1;
         }
         return rows;
+#else
+        return itemCount;
+#endif
     }
 };
 

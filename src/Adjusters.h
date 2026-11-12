@@ -7,8 +7,6 @@
 #include <Arduino.h>
 #include "MenuTypes.h"
 
-#define MAX_MULTI_SELECT_OPTIONS 16
-
 // -----------------------------------------------------------------------------
 // ValueAdjuster — abstract base
 // -----------------------------------------------------------------------------
@@ -125,18 +123,18 @@ class BoolValueAdjuster : public ValueAdjuster {
 private:
     bool* valuePtr;
     bool  tempValue;
-    char  trueLabel [MAX_MENU_NAME_LENGTH];
-    char  falseLabel[MAX_MENU_NAME_LENGTH];
+    char  trueLabel [MAX_BOOL_LABEL_LENGTH];
+    char  falseLabel[MAX_BOOL_LABEL_LENGTH];
 
 public:
     BoolValueAdjuster(bool* value,
                       const char* trueText  = "On",
                       const char* falseText = "Off")
         : valuePtr(value), tempValue(*value) {
-        strncpy(trueLabel,  trueText,  MAX_MENU_NAME_LENGTH - 1);
-        strncpy(falseLabel, falseText, MAX_MENU_NAME_LENGTH - 1);
-        trueLabel [MAX_MENU_NAME_LENGTH - 1] = '\0';
-        falseLabel[MAX_MENU_NAME_LENGTH - 1] = '\0';
+        strncpy(trueLabel,  trueText,  MAX_BOOL_LABEL_LENGTH - 1);
+        strncpy(falseLabel, falseText, MAX_BOOL_LABEL_LENGTH - 1);
+        trueLabel [MAX_BOOL_LABEL_LENGTH - 1] = '\0';
+        falseLabel[MAX_BOOL_LABEL_LENGTH - 1] = '\0';
     }
 
     AdjusterType getType() const override { return TYPE_BOOL; }
@@ -161,6 +159,7 @@ public:
     const char* getTempLabel()    const { return tempValue ? trueLabel : falseLabel; }
 };
 
+#if MENU_ENABLE_MULTISELECT
 // -----------------------------------------------------------------------------
 // MultiSelectAdjuster
 //
@@ -223,7 +222,7 @@ public:
 class MultiSelectAdjuster : public ValueAdjuster {
 public:
     // ── Constants ─────────────────────────────────────────────────────────────
-    static const uint8_t HARD_CAP = MAX_MULTI_SELECT_OPTIONS;  // 16
+    static const uint8_t HARD_CAP = MAX_MULTI_SELECT_OPTIONS;
 
 private:
     const char* labels[HARD_CAP];      // pointers to label strings (caller-owned)
@@ -457,5 +456,7 @@ private:
         if (cursorIndex > visCount) cursorIndex = visCount;
     }
 };
+
+#endif // MENU_ENABLE_MULTISELECT
 
 #endif // ADJUSTERS_H

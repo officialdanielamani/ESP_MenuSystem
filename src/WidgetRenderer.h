@@ -8,11 +8,21 @@
 #include "DisplayManager.h"
 #include "Adjusters.h"
 #include "MenuTypes.h"
-#include "DateAdjuster.h"
-#include "TimeAdjuster.h"
-#include "DisplayGauge.h"
-#include "DisplayBar.h"
-#include "StringAdjuster.h"
+#if MENU_ENABLE_DATE
+  #include "DateAdjuster.h"
+#endif
+#if MENU_ENABLE_TIME
+  #include "TimeAdjuster.h"
+#endif
+#if MENU_ENABLE_GAUGE
+  #include "DisplayGauge.h"
+#endif
+#if MENU_ENABLE_BAR
+  #include "DisplayBar.h"
+#endif
+#if MENU_ENABLE_STRING
+  #include "StringAdjuster.h"
+#endif
 
 class WidgetRenderer {
 public:
@@ -133,6 +143,7 @@ public:
         d->sendBuffer();
     }
 
+#if MENU_ENABLE_MULTISELECT
     // ── Multi-select checklist ────────────────────────────────────────────────
     // Scrollable list of [/]/[ ] rows plus a final OK row.
     void drawMultiSelect(MultiSelectAdjuster* adj, const char* title = "Select") {
@@ -245,6 +256,9 @@ public:
     }
 
 
+#endif // MENU_ENABLE_MULTISELECT
+
+#if MENU_ENABLE_DATE
     // ── Date editor ──────────────────────────────────────────────────────────
     // The ">" marker lives inside the date row and moves field by field.
     // After the last field, OK steps down to Redo / Set / Back.
@@ -408,6 +422,9 @@ public:
         d->sendBuffer();
     }
 
+#endif // MENU_ENABLE_DATE
+
+#if MENU_ENABLE_TIME
     // ── Time editor ──────────────────────────────────────────────────────────
     // Identical chrome to drawDateEditor but with time semantics and am/pm.
     //
@@ -550,6 +567,9 @@ public:
     }
 
 
+#endif // MENU_ENABLE_TIME
+
+#if MENU_ENABLE_STRING
     // ── String editor ────────────────────────────────────────────────────────
     //
     //  Phase 1 (character input):
@@ -1078,8 +1098,11 @@ private:
         drawRow(d, baseY + rowH * 2, fh, adj->confirmIsNo(),  "No");
     }
 
+#endif // MENU_ENABLE_STRING
+
 public:
 
+#if MENU_ENABLE_BAR
     // ── Bar graph (full-screen default view) ──────────────────────────────────
     //
     //  BAR_DEFAULT layout:
@@ -1259,6 +1282,9 @@ public:
         d->sendBuffer();
     }
 
+#endif // MENU_ENABLE_BAR
+
+#if MENU_ENABLE_GAUGE
 
     //  Layout (full content area):
     //  ┌──────────────────────────────┐
@@ -1517,6 +1543,8 @@ public:
         d->sendBuffer();
     }
 
+
+#endif // MENU_ENABLE_GAUGE
 
     // ── Error screen ─────────────────────────────────────────────────────────
     void drawError(int code, const char* message) {

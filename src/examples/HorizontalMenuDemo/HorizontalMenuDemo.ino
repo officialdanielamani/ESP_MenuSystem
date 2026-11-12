@@ -14,9 +14,13 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 MenuSystem menu(&u8g2, BTN_UP, BTN_DOWN, BTN_OK);
 
 // ── Value adjusters ────────────────────────────────────────────────────────
-FloatValueAdjuster tempAdj(22.0f, 10.0f, 35.0f, 0.5f, 1, "C");
-IntValueAdjuster   fanAdj(50, 0, 100, 5, "%");
-BoolValueAdjuster  heaterAdj(false, "ON", "OFF");
+// Adjusters edit the variable they point to: (&value, step, min, max, ...)
+float targetTemp = 22.0f;
+int   fanSpeed   = 50;
+bool  heaterOn   = false;
+FloatValueAdjuster tempAdj(&targetTemp, 0.5f, 10.0f, 35.0f, 1, "C");
+IntValueAdjuster   fanAdj(&fanSpeed, 5, 0, 100, "%");
+BoolValueAdjuster  heaterAdj(&heaterOn, "ON", "OFF");
 
 // ── Sensor for gauge ───────────────────────────────────────────────────────
 int humidity = 55;

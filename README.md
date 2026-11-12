@@ -24,6 +24,7 @@ Disclamer: Majority of the library and document is re-written by Cloude AI
 - [Display & Layout Configuration](#display--layout-configuration)
 - [Navigation & State](#navigation--state)
 - [Input Configuration](#input-configuration)
+- [Reducing Firmware Size](#reducing-firmware-size)
 - [Compile-Time Limits](#compile-time-limits)
 - [Quick Reference](#quick-reference)
 
@@ -31,7 +32,9 @@ Disclamer: Majority of the library and document is re-written by Cloude AI
 
 ## Installation
 
-Copy the `esp32_menu` folder into your Arduino `libraries/` directory. Install **U8g2** separately.
+Copy the `src` folder into your Arduino `libraries/` directory (rename it to `ESP32_MenuSystem`). Install **U8g2** separately.
+
+Rotary-encoder input also needs the **ESP32Encoder** library. If you only use buttons, add `#define MENU_ENABLE_ENCODER 0` before the include and you do not need to install it.
 
 ```cpp
 #include <ESP32_MenuSystem.h>
@@ -87,17 +90,22 @@ MenuSystem menu(&u8g2, BTN_PIN, shortPressIsUp);                // 1-button
 | `addDisplayBarInt(menuId, "Name", &b)` | Bar graph (int). |
 | `addDisplayBarFloat(menuId, "Name", &b)` | Bar graph (float). |
 | `addMultiSelectMenuItem(menuId, "Name", &ms)` | Multi-select checklist. |
+| `addMenuText(menuId, &textPtr, paragraph, font, maxChars)` | Non-selectable text row (single scrolling line or word-wrapped paragraph). |
 | `addScreenInfo(menuId, callback)` | Draw overlay callback. |
+| `renameItem(menuId, itemIndex, "New")` | Change an item label at runtime. |
+| `renameMenuTitle(menuId, "New")` | Change a menu title at runtime. |
+
+Each optional widget can be compiled out — its `addXxx()` method then no longer exists. See [Reducing Firmware Size](#reducing-firmware-size).
 
 ---
 
 ## Dynamic Menu Behavior
 
-**Add at runtime?** Yes — any `addXxx()` works after `setup()` (up to 16 items per menu).
+**Add at runtime?** Yes — any `addXxx()` works after `setup()` (up to `MAX_MENU_ITEMS` = 16 items per menu).
 
 **Remove at runtime?** No — manage visibility in your logic instead.
 
-**Rename at runtime?** Not via public API — names are copied as `char[32]` at creation. Use `addScreenInfo()` for dynamic text.
+**Rename at runtime?** Yes — `renameItem()` / `renameMenuTitle()`. Names are copied into a fixed `char[MAX_MENU_NAME_LENGTH]` buffer (default 24 = 23 visible characters); longer names are cut off. For free-form dynamic text use `addMenuText()` or `addScreenInfo()`.
 
 ---
 
@@ -106,7 +114,7 @@ MenuSystem menu(&u8g2, BTN_PIN, shortPressIsUp);                // 1-button
 ```cpp
 IntValueAdjuster adj(&brightness, 5, 0, 100, "%");        // int
 FloatValueAdjuster adj(&temp, 0.5, 10.0, 40.0, 1, "C");  // float
-BoolValueAdjuster adj(&wifi, "Enabled", "Disabled");       // bool
+BoolValueAdjuster adj(&wifi, "Enabled", "Disabled");       // bool (labels: max 15 chars)
 
 MultiSelectAdjuster ms;
 ms.addOption("Monday", true);
@@ -131,10 +139,10 @@ menu.addStringMenuItem(settingsMenu, "Name", &sa);
 
 | Parameter | Description |
 |-----------|-------------|
-| `value` | Target `char[]` buffer (at least 33 bytes). |
+| `value` | Target `char[]` buffer (at least `MAX_STRING_LENGTH + 1` = 33 bytes). |
 | `palette` | Allowed characters. Use predefined macros or custom strings. |
 | `minLen` | Minimum length. `0` = empty allowed. |
-| `maxLen` | Maximum length. Capped to 32. |
+| `maxLen` | Maximum length. Capped to `MAX_STRING_LENGTH` (32). |
 
 ### Predefined Palettes
 
@@ -359,15 +367,113 @@ menu.setLongPressThreshold(2000);  // single-button (default 3000ms)
 
 ---
 
+## Reducing Firmware Size
+
+The menu engine draws and handles every widget through one dispatcher, so the linker cannot remove a widget just because your sketch never creates one. By default **everything is compiled in**. Switch off what you do not use and its code, strings and fonts are left out of the firmware.
+
+### Feature switches
+
+Define a switch as `0` **before** including the library:
+
+```cpp
+#define MENU_ENABLE_STRING 0     // no StringAdjuster / string editor
+#define MENU_ENABLE_GAUGE  0     // no gauges
+#include <ESP32_MenuSystem.h>
+```
+
+Or start from nothing and enable only what you need:
+
+```cpp
+#define MENU_MINIMAL             // all optional features off
+#define MENU_ENABLE_TIME 1       // ...except the time editor
+#include <ESP32_MenuSystem.h>
+```
+
+| Switch | Removes when `0` | Approx. flash saved* |
+|--------|------------------|---------------------|
+| `MENU_ENABLE_STRING` | `StringAdjuster`, `addStringMenuItem()` | 6.3 KB |
+| `MENU_ENABLE_DATE` | `DateAdjuster`, `addDateMenuItem()` | 4.0 KB |
+| `MENU_ENABLE_GAUGE` | `DisplayGaugeInt/Float`, `addDisplayGaugeXxx()` | 3.7 KB |
+| `MENU_ENABLE_TIME` | `TimeAdjuster`, `addTimeMenuItem()` | 3.3 KB |
+| `MENU_ENABLE_BAR` | `DisplayBarInt/Float`, `addDisplayBarXxx()` | 2.8 KB |
+| `MENU_ENABLE_MULTISELECT` | `MultiSelectAdjuster`, `addMultiSelectMenuItem()` | 2.2 KB |
+| `MENU_ENABLE_TEXT` | `addMenuText()` (and the `4x6` font it links) | 1.7 KB + font, and 4 bytes RAM per item slot |
+| `MENU_ENABLE_ONE_BUTTON` | 1-button constructor and its on-screen hints | 0.4 KB |
+| `MENU_ENABLE_ENCODER` | Encoder constructor **and the ESP32Encoder dependency** | — |
+| `MENU_MINIMAL` | All of the above | about 28 KB (menu engine drops to roughly 40 % of full size) |
+
+Menus, callbacks, int/float/bool editors, `addScreenInfo()` and 3-button input are always available.
+
+\* Measured with a desktop GCC build (`-Os`) of a two-item menu, not on an ESP32. Use the numbers to compare features with each other; the real savings on your board will differ.
+
+Using a disabled feature is a compile error (for example `'DateAdjuster' was not declared`) — set its switch back to `1`.
+
+### Fonts
+
+The three default fonts are always linked. If you call `setFonts()` with your own, point the defaults at them too so the built-in ones (the `10x20` value font is the largest) are not stored in flash:
+
+```cpp
+#define MENU_DEFAULT_STANDARD_FONT u8g2_font_5x8_tr
+#define MENU_DEFAULT_TITLE_FONT    u8g2_font_6x12_tr
+#define MENU_DEFAULT_VALUE_FONT    u8g2_font_6x12_tr   // instead of 10x20
+#include <ESP32_MenuSystem.h>
+```
+
+`setFontPreset()` only links its extra fonts if your sketch calls it.
+
+### Where to put the defines
+
+| Project type | How |
+|--------------|-----|
+| Single sketch (`.ino`) | `#define` lines above `#include <ESP32_MenuSystem.h>` |
+| PlatformIO | `build_flags = -DMENU_MINIMAL -DMENU_ENABLE_TIME=1 -DMAX_MENU_DEPTH=6` |
+| Arduino IDE, several `.cpp` files | Same `-D` flags in a `build_opt.h` file next to the sketch |
+
+> The library is header-only. If more than one source file includes it, **every file must see the same settings** — use compiler flags in that case, not per-file `#define`s.
+
+All switches and limits live in `src/MenuConfig.h`.
+
+---
+
 ## Compile-Time Limits
+
+Menus are stored in fixed arrays (no heap), so these limits decide how much RAM the library uses. Override them the same way as the feature switches.
 
 | Define | Default | Meaning |
 |--------|---------|---------|
+| `MAX_MENU_DEPTH` | 16 | Total number of menus (`addMenu()` calls) |
 | `MAX_MENU_ITEMS` | 16 | Items per menu |
-| `MAX_MENU_DEPTH` | 32 | Total menus |
-| `MAX_MENU_NAME_LENGTH` | 32 | Chars per item name |
+| `MAX_MENU_NAME_LENGTH` | 24 | Item-name / title buffer, including the terminator (23 visible chars) |
+| `MAX_BOOL_LABEL_LENGTH` | 16 | `BoolValueAdjuster` label buffer (15 visible chars) |
+| `MAX_STRING_LENGTH` | 32 | Chars a `StringAdjuster` can edit |
 | `MAX_MULTI_SELECT_OPTIONS` | 16 | Multi-select choices |
-| `MAX_STRING_LENGTH` | 32 | Chars for string input |
+| `MAX_TEXT_LENGTH` | 64 | Chars drawn per `addMenuText()` line |
+| `MAX_ERROR_LENGTH` | 48 | `setError()` message buffer (47 visible chars) |
+| `MAX_VISUAL_ROWS` | 64 | Rows one menu can expand to (items + wrapped paragraph lines) |
+
+Text longer than its buffer is truncated, never overflowed. Adding beyond `MAX_MENU_DEPTH` / `MAX_MENU_ITEMS` is ignored (`addMenu()` returns `-1`).
+
+### RAM used by the menu tree
+
+```
+MAX_MENU_DEPTH × (MAX_MENU_NAME_LENGTH + 16 + MAX_MENU_ITEMS × (MAX_MENU_NAME_LENGTH + 16))
+```
+
+| Menus × items × name | RAM (ESP32) |
+|----------------------|-------------|
+| 16 × 16 × 32 (old defaults) | ≈ 13.1 KB |
+| 16 × 16 × 24 (defaults) | ≈ 10.9 KB |
+| 8 × 8 × 16 | ≈ 2.3 KB |
+| 4 × 6 × 16 | ≈ 0.9 KB |
+
+```cpp
+#define MAX_MENU_DEPTH       6
+#define MAX_MENU_ITEMS       8
+#define MAX_MENU_NAME_LENGTH 16
+#include <ESP32_MenuSystem.h>
+```
+
+Each adjuster object you create also holds its own buffers: a `StringAdjuster` about `2 × MAX_STRING_LENGTH`, a `BoolValueAdjuster` `2 × MAX_BOOL_LABEL_LENGTH`, a `MultiSelectAdjuster` about `6 × MAX_MULTI_SELECT_OPTIONS` bytes.
 
 ---
 
